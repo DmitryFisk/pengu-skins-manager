@@ -2,10 +2,19 @@
  * @author AxiFisk
  * @name Skin randomizer
  * @description picks random skin for your champion
- * @version 1.1
+ * @version 1.2
  */
 
+import localeSelector from "./localeSelector.js";
 const delay = (t) => new Promise((r) => setTimeout(r, t));
+
+async function getClientLocale() {
+    const res = await fetch("/riotclient/get_region_locale");
+    const data = await res.json();
+
+    console.log(data);
+    return data.locale;
+}
 
 async function getChampionSkins() {
     const res = await fetch("/lol-champ-select/v1/skin-carousel-skins");
@@ -35,6 +44,7 @@ function subscribeOnEvent() {
         socket.send(JSON.stringify([5, "OnJsonApiEvent" + targetEvent]));
     socket.onmessage = async (message) => {
         if (!DataStore.get("sr_enable")) return;
+
         let data = JSON.parse(message.data);
         data = data[2].data;
 
@@ -42,8 +52,6 @@ function subscribeOnEvent() {
             const championSkinsArray = await getChampionSkins();
 
             if (championSkinsArray.length > 1) {
-                console.log("Selecting random skin");
-
                 const randomSkinId =
                     championSkinsArray[
                         Math.floor(Math.random() * championSkinsArray.length)
@@ -68,6 +76,8 @@ function subscribeOnEvent() {
 }
 
 async function createToggle() {
+    const locale = await getClientLocale();
+
     const checkboxDiv = document.createElement("div");
     const checkbox = document.createElement("lol-uikit-flat-checkbox");
     const checkboxInput = document.createElement("input");
@@ -78,7 +88,10 @@ async function createToggle() {
     checkbox.className = "sr-checkbox";
     checkbox.setAttribute("for", "enableSkinRandomizer");
 
-    checkboxLabel.textContent = "Enable skin randomizer";
+    checkboxLabel.textContent = localeSelector.pickLocale(
+        locale,
+        "checkboxLabel"
+    );
     checkboxLabel.setAttribute("slot", "label");
 
     checkboxInput.className = "ember-checkbox ember-view";
@@ -118,10 +131,11 @@ async function createToggle() {
 }
 
 window.addEventListener("load", async () => {
+    await delay(1000);
+
     if (DataStore.get("sr_enable") == undefined)
         DataStore.set("sr_enable", true);
 
-    await delay(1000);
     subscribeOnEvent();
     createToggle();
 });
