@@ -8,7 +8,14 @@ const localeTable = {
     },
 };
 
-function pickLocale(locale, element) {
+async function getClientLocale() {
+    const res = await fetch("/riotclient/get_region_locale");
+    const data = await res.json();
+
+    return data.locale;
+}
+
+async function pickLocale(locale, element) {
     if (!element) return console.error("Specify an element to translate");
     if (!localeTable[locale]) locale = "en_US";
 
@@ -17,4 +24,5 @@ function pickLocale(locale, element) {
 
 export default {
     pickLocale: pickLocale,
+    getClientLocale: getClientLocale,
 };
