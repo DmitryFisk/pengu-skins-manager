@@ -17,7 +17,7 @@ async function getChampionSkins() {
 }
 
 function manageSkinsArray(skinsArray) {
-    skinsArray.filter((s) => s.unlocked == true);
+    skinsArray = skinsArray.filter((s) => s.unlocked == true);
 
     const availableSkinsArray = skinsArray.map((s) => s.id);
     return availableSkinsArray;
