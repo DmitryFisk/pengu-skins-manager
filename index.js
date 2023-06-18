@@ -2,7 +2,7 @@
  * @author AxiFisk
  * @name Skin randomizer
  * @description picks random skin for your champion
- * @version 1.3
+ * @version 1.4
  */
 
 import localeSelector from "./localeSelector";
@@ -20,9 +20,9 @@ async function getChampionSkins() {
 }
 
 function manageSkinsArray(skinsArray) {
-    skinsArray = skinsArray.filter((s) => s.unlocked == true);
-
-    const availableSkinsArray = skinsArray.map((s) => s.id);
+    const availableSkinsArray = skinsArray
+        .filter((s) => s.unlocked == true)
+        .map((s) => s.id);
     return availableSkinsArray;
 }
 
@@ -147,11 +147,17 @@ async function createRerollButton() {
 
     setInterval(() => {
         const leftPanel = document.querySelector(".bottom-right-buttons");
+        const skinSelector = document.querySelector(".skin-select");
 
-        if (leftPanel && !document.querySelector(".lock-in.visible")) {
-            if (!document.querySelector(".sr-reroll-div")) leftPanel.append(buttonDiv);
+        if (
+            leftPanel &&
+            skinSelector.parentElement.className == "visible" &&
+            DataStore.get("sr_enable")
+        ) {
+            if (!document.querySelector(".sr-reroll-div"))
+                leftPanel.insertBefore(buttonDiv, document.querySelector("lol-social-chat-toggle-button"));
         } else {
-            document.querySelector(".sr-reroll-div").remove();
+            if (document.querySelector(".sr-reroll-div")) document.querySelector(".sr-reroll-div").remove();
         }
     }, 100);
 }
