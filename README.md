@@ -2,8 +2,8 @@
 
 ## How to install
 
-1. Download 
-2. Extract the archive contents into C:\Users\username\AppData\Local\Programs\Pengu Loader\plugins\
+1. Download the zip archive
+2. Extract the archive contents into your pengu loader plugins folder
 3. Restart/reload league client
 
 ## Usage
