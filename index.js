@@ -2,10 +2,11 @@
  * @author AxiFisk
  * @name Skin randomizer
  * @description picks random skin for your champion
- * @version 1.4
+ * @version 1.5
  */
 
 import localeSelector from "./localeSelector";
+import config from "./config";
 import "./button.css";
 
 const delay = (t) => new Promise((r) => setTimeout(r, t));
@@ -26,26 +27,29 @@ function manageSkinsArray(skinsArray) {
     return availableSkinsArray;
 }
 
-async function pickRandomSkin(message) {
+async function pickRandomSkin(message, isReroll = false) {
     let data = 0;
     if (!message) {
-        data = DataStore.get("champion_id");
+        data = config.get("championId");
     } else {
         data = JSON.parse(message.data);
         data = data[2].data;
-        DataStore.set("champion_id", data);
+        config.update("championId", data);
     }
 
     if (data != 0) {
         const championSkinsArray = await getChampionSkins();
-
-        if (championSkinsArray.length > 1) {
+        
+        if (championSkinsArray.length > 2) {
+            config.update("showRerollButton", true);
+            createRerollButton();
+            
             const randomSkinId =
                 championSkinsArray[
                     Math.floor(Math.random() * championSkinsArray.length)
                 ];
-            console.log(randomSkinId);
-            const res = await fetch(
+            
+            if (isReroll || config.get("randomizeOnPick")) await fetch(
                 `/lol-champ-select/v1/session/my-selection`,
                 {
                     method: "PATCH",
@@ -56,8 +60,11 @@ async function pickRandomSkin(message) {
                     },
                 }
             );
-            console.log(res.status);
+
+
             return;
+        } else {
+            config.update("showRerollButton", false);
         }
     }
 }
@@ -73,60 +80,52 @@ function subscribeOnEvent() {
     socket.onopen = () =>
         socket.send(JSON.stringify([5, "OnJsonApiEvent" + targetEvent]));
     socket.onmessage = async (message) => {
-        if (!DataStore.get("sr_enable")) return;
-
-        await pickRandomSkin(message);
+        if (config.get("enabled") && message.data.startsWith("[8")) {
+            return await pickRandomSkin(message);
+        }
     };
 }
 
-async function createToggleCheckbox() {
+async function createCheckbox(checkboxClassName, checkboxLocaleName, checkboxAttribute, checkboxConfigKey, appendBeforePosition) {
     const checkboxDiv = document.createElement("div");
     const checkbox = document.createElement("lol-uikit-flat-checkbox");
     const checkboxInput = document.createElement("input");
     const checkboxLabel = document.createElement("label");
 
     checkboxDiv.className = "lol-settings-general-row";
+    
+    checkbox.className = `${checkboxClassName}`;
+    checkbox.setAttribute("for", checkboxAttribute);
 
-    checkbox.className = "sr-checkbox";
-    checkbox.setAttribute("for", "enableSkinRandomizer");
-
-    checkboxLabel.textContent = await localeSelector.pickLocale(
-        DataStore.get("sr_locale"),
-        "checkboxLabel"
+    checkboxLabel.textContent = localeSelector.pickLocale(
+        config.get("locale"),
+        checkboxLocaleName
     );
     checkboxLabel.setAttribute("slot", "label");
 
     checkboxInput.className = "ember-checkbox ember-view";
-    checkboxInput.setAttribute("name", "enableSkinRandomizer");
+    checkboxInput.setAttribute("name", checkboxAttribute);
     checkboxInput.setAttribute("slot", "input");
     checkboxInput.setAttribute("type", "checkbox");
 
     checkbox.append(checkboxInput, checkboxLabel);
     checkboxDiv.append(checkbox);
 
-    if (DataStore.get("sr_enable"))
-        checkboxInput.setAttribute("checked", "true");
+    if (config.get(checkboxConfigKey)) checkboxInput.setAttribute("checked", "true");
 
-    checkboxInput.onclick = (i) => {
-        if (i.toElement.getAttribute("checked", "true")) {
-            i.toElement.removeAttribute("checked");
-            DataStore.set("sr_enable", false);
-        } else {
-            i.toElement.setAttribute("checked", "true");
-            DataStore.set("sr_enable", true);
-        }
-    };
+    checkboxInput.onclick = async () =>
+        config.update(checkboxConfigKey, !config.get(checkboxConfigKey));
 
     setInterval(() => {
         const settingsEl = document.querySelector(".lol-settings-options");
         if (
             settingsEl &&
-            !document.querySelector(".sr-checkbox") &&
+            !document.querySelector(`.${checkboxClassName}`) &&
             document.querySelector(".lol-settings-account-verification-row")
         ) {
             settingsEl.children[0].insertBefore(
                 checkboxDiv,
-                document.querySelectorAll(".lol-settings-general-row")[1]
+                document.querySelectorAll(".lol-settings-general-row")[appendBeforePosition] //todo: replace it by autodetecting after which one it should append another one 
             );
         }
     }, 300);
@@ -140,41 +139,38 @@ async function createRerollButton() {
     button.classList = "sr-reroll mission-button use-animation";
 
     buttonDiv.append(button);
-
     button.onclick = async () => {
-        await pickRandomSkin();
+        await pickRandomSkin(null, true);
     };
 
-    setInterval(() => {
-        const leftPanel = document.querySelector(".bottom-right-buttons");
-        const skinSelector = document.querySelector(".skin-select");
+    const leftPanel = document.querySelector(".bottom-right-buttons");
+    const skinSelector = document.querySelector(".skin-select");
 
+    if (
+        leftPanel &&
+        skinSelector.parentElement.className == "visible" &&
+        config.get("enabled")
+    ) {
+        if (!document.querySelector(".sr-reroll-div"))
+            leftPanel.insertBefore(
+                buttonDiv,
+                document.querySelector("lol-social-chat-toggle-button")
+            );
+    } else {
         if (
-            leftPanel &&
-            skinSelector.parentElement.className == "visible" &&
-            DataStore.get("sr_enable")
-        ) {
-            if (!document.querySelector(".sr-reroll-div"))
-                leftPanel.insertBefore(buttonDiv, document.querySelector("lol-social-chat-toggle-button"));
-        } else {
-            if (document.querySelector(".sr-reroll-div")) document.querySelector(".sr-reroll-div").remove();
-        }
-    }, 100);
+            document.querySelector(".sr-reroll-div") &&
+            !config.get("enabled") &&
+            !config.get("showRerollButton")
+        )
+            document.querySelector(".sr-reroll-div").remove();
+    }
 }
 
 window.addEventListener("load", async () => {
-    const locale = await localeSelector.getClientLocale();
-    if (locale != DataStore.get("sr_locale"))
-        DataStore.set("sr_locale", locale);
+    await delay(3000);
 
-    await delay(1000);
-
-    if (DataStore.get("sr_enable") == undefined)
-        DataStore.set("sr_enable", true);
-
-    if (DataStore.get("champion_id")) DataStore.remove("champion_id");
-
+    config.init();
     subscribeOnEvent();
-    createToggleCheckbox();
-    createRerollButton();
+    createCheckbox("sr-enable", "checkboxLabel_isEnabled", "checkbox_enableSkinRandomizer", "enabled", 1);
+    createCheckbox("sr-randomizeOnPick", "checkboxLabel_randomizeOnPick", "checkbox_randomizeOnPick", "randomizeOnPick", 2);
 });

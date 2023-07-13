@@ -1,10 +1,12 @@
 const localeTable = {
     en_US: {
-        checkboxLabel: "Enable skin randomizer",
+        checkboxLabel_isEnabled: "Enable skin randomizer",
+        checkboxLabel_randomizeOnPick: "Randomize on champion pick"
     },
 
     ru_RU: {
-        checkboxLabel: "Включить рандомайзер скинов",
+        checkboxLabel_isEnabled: "Включить рандомайзер скинов",
+        checkboxLabel_randomizeOnPick: "Выбрать случайный скин после выбора чемпиона"
     },
 };
 
@@ -15,7 +17,7 @@ async function getClientLocale() {
     return data.locale;
 }
 
-async function pickLocale(locale, element) {
+function pickLocale(locale, element) {
     if (!element) return console.error("Specify an element to translate");
     if (!localeTable[locale]) locale = "en_US";
 
