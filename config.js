@@ -6,15 +6,15 @@ function update(k, v) {
 }
 
 function get(k) {
-    DataStore.get("sr_preferences")[k];
+    return DataStore.get("sr_preferences")[k];
 }
 
-async function init() {
+function init() {
     if (!DataStore.has("sr_preferences"))
         DataStore.set("sr_preferences", {
             championId: 0,
             enableRandomize: true,
-            removeLockedSkins: false
+            highlightUnlocked: true
         });
 }
 
